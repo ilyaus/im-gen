@@ -114,6 +114,12 @@ class JobStatusResponse(BaseModel):
     result: GenerationResult | None = None
 
 
+class ArtifactSummary(BaseModel):
+    filename: str
+    download_url: str | None = None
+    seed: int | None = None
+
+
 class JobSummary(BaseModel):
     job_id: str
     status: JobStatus
@@ -124,6 +130,7 @@ class JobSummary(BaseModel):
     error: str | None = None
     artifact_count: int = 0
     thumbnail_url: str | None = None
+    artifacts: list[ArtifactSummary] = Field(default_factory=list)
 
 
 class JobListResponse(BaseModel):

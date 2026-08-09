@@ -61,6 +61,12 @@ export interface JobStatusResponse {
   result: GenerationResult | null;
 }
 
+export interface ArtifactSummary {
+  filename: string;
+  download_url: string | null;
+  seed: number | null;
+}
+
 export interface JobSummary {
   job_id: string;
   status: JobStatus;
@@ -71,6 +77,7 @@ export interface JobSummary {
   error: string | null;
   artifact_count: number;
   thumbnail_url: string | null;
+  artifacts: ArtifactSummary[];
 }
 
 export interface JobListResponse {
