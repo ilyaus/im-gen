@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 from datetime import datetime
 from enum import StrEnum
-import random
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -26,16 +26,16 @@ class JobStatus(StrEnum):
 class GenerationRequest(BaseModel):
     model: str = Field(description="Registered model name to invoke")
     prompt: str = Field(min_length=1, description="Text prompt used for generation")
-    height: int = Field(default=1024, ge=64, le=2048)
-    width: int = Field(default=512, ge=64, le=2048)
-    num_images_per_prompt: int = Field(default=1, ge=1, le=8)
+    height: int | None = Field(default=None, ge=64, le=2048)
+    width: int | None = Field(default=None, ge=64, le=2048)
+    num_images_per_prompt: int | None = Field(default=None, ge=1, le=8)
     neg_prompt: str | None = Field(default=None, description="Optional negative prompt")
     images: list[str] | None = Field(
         default=None,
         description="Optional local image paths for image-conditioned models",
     )
     guidance_scale: float | None = Field(default=None, ge=0.0, le=20.0)
-    inf_steps: int = Field(default=4, ge=1, le=100)
+    inf_steps: int | None = Field(default=None, ge=1, le=100)
     seed: int = Field(default_factory=random_int)
     device: str | None = Field(
         default=None, description="Execution device, e.g. cuda or cpu"
@@ -45,14 +45,14 @@ class GenerationRequest(BaseModel):
         description="Optional output filename prefix without extension",
     )
     lora_weight_name: str | None = Field(
-        default="bfs_head_v1_flux-klein_9b_step3750_rank64.safetensors",
+        default=None,
         description="LoRA checkpoint filename; used by BFS model when loading adapter weights",
     )
     test_gen: TestImageGen | None = Field(default=None)
 
     @model_validator(mode="after")
     def validate_test_gen(self) -> GenerationRequest:
-        if self.test_gen is not None and self.num_images_per_prompt != 1:
+        if self.test_gen is not None and self.num_images_per_prompt not in (None, 1):
             raise ValueError(
                 "test_gen requires num_images_per_prompt=1 so each seed produces one image"
             )
@@ -114,7 +114,44 @@ class JobStatusResponse(BaseModel):
     result: GenerationResult | None = None
 
 
+class JobSummary(BaseModel):
+    job_id: str
+    status: JobStatus
+    created_at: datetime
+    completed_at: datetime | None = None
+    model: str
+    prompt: str
+    error: str | None = None
+    artifact_count: int = 0
+    thumbnail_url: str | None = None
+
+
+class JobListResponse(BaseModel):
+    jobs: list[JobSummary]
+    total: int
+    limit: int
+    offset: int
+
+
+class ModelDefaults(BaseModel):
+    guidance_scale: float = 1.0
+    inf_steps: int = 4
+    height: int = 1024
+    width: int = 1024
+    num_images_per_prompt: int = 1
+
+
+class ModelCapabilities(BaseModel):
+    supports_negative_prompt: bool = True
+    supports_image_input: bool = False
+    requires_image_input: bool = False
+    supports_multi_image: bool = True
+    max_images: int = 8
+
+
 class ModelInfo(BaseModel):
     name: str
     module: str
     description: str
+    defaults: ModelDefaults = Field(default_factory=ModelDefaults)
+    capabilities: ModelCapabilities = Field(default_factory=ModelCapabilities)

@@ -12,8 +12,15 @@ dependencies = [
     "uvicorn>=0.34.0",
     "transformers",
     "peft>=0.19.1",
+    "pyyaml>=6.0.3",
 ]
 
 [tool.uv.sources]
 transformers = { git = "https://github.com/huggingface/transformers.git" }
 diffusers = { git = "https://github.com/huggingface/diffusers.git" }
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]

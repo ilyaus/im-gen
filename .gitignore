@@ -11,3 +11,10 @@ wheels/
 
 # Generated outputs
 generated/
+
+# UI
+ui/node_modules/
+ui/dist/
+
+# Local config
+config.yaml

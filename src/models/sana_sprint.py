@@ -3,21 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
-from diffusers.pipelines.flux2.pipeline_flux2_klein import Flux2KleinPipeline
+from diffusers import SanaSprintPipeline
 
 from src.models.base import run_generation
 from src.schemas import GenerationRequest, GenerationResult
 
 PIPE = None
-DTYPE = torch.bfloat16
 
 
-def get_pipe() -> Flux2KleinPipeline:
+def get_pipe() -> SanaSprintPipeline:
     global PIPE
     if PIPE is None:
-        PIPE = Flux2KleinPipeline.from_pretrained(
-            "black-forest-labs/FLUX.2-klein-9B",
-            torch_dtype=DTYPE,
+        PIPE = SanaSprintPipeline.from_pretrained(
+            "Efficient-Large-Model/Sana_Sprint_1.6B_1024px_diffusers",
+            torch_dtype=torch.bfloat16,
         )
     return PIPE
 
@@ -30,8 +29,7 @@ def generate(
         output_dir=output_dir,
         job_id=job_id,
         get_pipe=get_pipe,
-        default_guidance_scale=1.0,
-        offload="sequential",
+        default_guidance_scale=4.5,
+        offload="none",
         accepts_negative_prompt=False,
-        accepts_image_input=True,
     )
