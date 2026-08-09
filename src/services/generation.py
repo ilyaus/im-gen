@@ -10,6 +10,7 @@ from uuid import uuid4
 from src.config import get_config, resolve_request_defaults
 from src.models.registry import get_generator, get_model_info
 from src.schemas import (
+    ArtifactSummary,
     GenerationRequest,
     GenerationResult,
     JobRecord,
@@ -110,6 +111,14 @@ class GenerationService:
                     error=job.error,
                     artifact_count=len(artifacts),
                     thumbnail_url=artifacts[0].download_url if artifacts else None,
+                    artifacts=[
+                        ArtifactSummary(
+                            filename=artifact.filename,
+                            download_url=artifact.download_url,
+                            seed=artifact.seed,
+                        )
+                        for artifact in artifacts
+                    ],
                 )
             )
         return summaries, total

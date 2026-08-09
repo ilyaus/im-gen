@@ -26,11 +26,17 @@ UI_DIST_DIR = Path(__file__).resolve().parent.parent.parent / "ui" / "dist"
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
-            return await super().get_response(path, scope)
+            response = await super().get_response(path, scope)
         except StarletteHTTPException as exc:
             if exc.status_code == 404:
-                return await super().get_response("index.html", scope)
-            raise
+                response = await super().get_response("index.html", scope)
+            else:
+                raise
+        # Always disable caching for HTML so new JS/CSS bundles are picked up
+        content_type = response.headers.get("content-type", "")
+        if "text/html" in content_type:
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
 
 
 def create_app() -> FastAPI:
