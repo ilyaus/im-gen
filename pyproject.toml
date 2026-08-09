@@ -1,0 +1,19 @@
+[project]
+name = "im-gen"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate>=1.13.0",
+    "diffusers",
+    "fastapi>=0.115.0",
+    "langchain-ollama>=1.1.0",
+    "uvicorn>=0.34.0",
+    "transformers",
+    "peft>=0.19.1",
+]
+
+[tool.uv.sources]
+transformers = { git = "https://github.com/huggingface/transformers.git" }
+diffusers = { git = "https://github.com/huggingface/diffusers.git" }
