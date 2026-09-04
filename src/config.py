@@ -24,12 +24,48 @@ class BfsLoraConfig(BaseModel):
     scale: float = 1.0
 
 
+class OllamaConfig(BaseModel):
+    base_url: str = "http://localhost:11434"
+
+
+class LmStudioConfig(BaseModel):
+    base_url: str = "http://localhost:1234/v1"
+
+
+class AzureLlmConfig(BaseModel):
+    endpoint: str | None = None
+    api_version: str = "2024-10-21"
+    deployments: list[str] = Field(default_factory=list)
+
+
+class BedrockLlmConfig(BaseModel):
+    region: str | None = None
+    model_ids: list[str] = Field(default_factory=list)
+
+
+class LlmConfig(BaseModel):
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    lmstudio: LmStudioConfig = Field(default_factory=LmStudioConfig)
+    azure: AzureLlmConfig = Field(default_factory=AzureLlmConfig)
+    bedrock: BedrockLlmConfig = Field(default_factory=BedrockLlmConfig)
+    default_max_tokens: int = Field(default=512, ge=1, le=8192)
+    default_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    enabled_models: list[str] | None = Field(
+        default=None,
+        description=(
+            "Model ids usable for prompt enhancement; "
+            "null means every discovered model is enabled"
+        ),
+    )
+
+
 class ServiceConfig(BaseModel):
     output_root: str = "generated"
     max_workers: int = Field(default=1, ge=1, le=8)
     default_model: str | None = None
     bfs_lora: BfsLoraConfig = Field(default_factory=BfsLoraConfig)
     model_defaults: dict[str, ModelDefaultOverride] = Field(default_factory=dict)
+    llm: LlmConfig = Field(default_factory=LlmConfig)
 
 
 _lock = threading.Lock()
@@ -52,6 +88,32 @@ def _apply_env_fallbacks(data: dict) -> dict:
             bfs["weight_name"] = os.environ["IM_GEN_BFS_LORA_WEIGHT_NAME"]
         if "scale" not in bfs and os.getenv("IM_GEN_BFS_LORA_SCALE"):
             bfs["scale"] = float(os.environ["IM_GEN_BFS_LORA_SCALE"])
+
+    llm = data.setdefault("llm", {})
+    if isinstance(llm, dict):
+        ollama = llm.setdefault("ollama", {})
+        if isinstance(ollama, dict) and not ollama.get("base_url"):
+            if os.getenv("OLLAMA_BASE_URL"):
+                ollama["base_url"] = os.environ["OLLAMA_BASE_URL"]
+            else:
+                ollama.pop("base_url", None)
+        lmstudio = llm.setdefault("lmstudio", {})
+        if isinstance(lmstudio, dict) and not lmstudio.get("base_url"):
+            if os.getenv("LMSTUDIO_BASE_URL"):
+                lmstudio["base_url"] = os.environ["LMSTUDIO_BASE_URL"]
+            else:
+                lmstudio.pop("base_url", None)
+        azure = llm.setdefault("azure", {})
+        if isinstance(azure, dict):
+            if not azure.get("endpoint") and os.getenv("AZURE_OPENAI_ENDPOINT"):
+                azure["endpoint"] = os.environ["AZURE_OPENAI_ENDPOINT"]
+            if not azure.get("api_version") and os.getenv("AZURE_OPENAI_API_VERSION"):
+                azure["api_version"] = os.environ["AZURE_OPENAI_API_VERSION"]
+        bedrock = llm.setdefault("bedrock", {})
+        if isinstance(bedrock, dict) and not bedrock.get("region"):
+            region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+            if region:
+                bedrock["region"] = region
     return data
 
 

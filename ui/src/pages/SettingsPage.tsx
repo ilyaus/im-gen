@@ -22,6 +22,11 @@ export default function SettingsPage() {
     queryKey: ["config"],
     queryFn: api.getConfig,
   });
+  const { data: llmModels } = useQuery({
+    queryKey: ["llm-models"],
+    queryFn: api.listLlmModels,
+    refetchInterval: 30000,
+  });
 
   const [draft, setDraft] = useState<ServiceConfig | null>(null);
   const [saved, setSaved] = useState(false);
@@ -36,6 +41,7 @@ export default function SettingsPage() {
     mutationFn: (next: ServiceConfig) => api.putConfig(next),
     onSuccess: (next) => {
       queryClient.setQueryData(["config"], next);
+      queryClient.invalidateQueries({ queryKey: ["llm-models"] });
       setDraft(structuredClone(next));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -68,6 +74,38 @@ export default function SettingsPage() {
       }
       return next;
     });
+  };
+
+  const isLlmModelEnabled = (id: string) =>
+    draft.llm.enabled_models === null || draft.llm.enabled_models.includes(id);
+
+  const toggleLlmModel = (id: string, checked: boolean) => {
+    setDraft((previous) => {
+      if (!previous) return previous;
+      const allIds = llmModels?.map((m) => m.id) ?? [];
+      const current = previous.llm.enabled_models ?? allIds;
+      const next = checked
+        ? [...new Set([...current, id])]
+        : current.filter((entry) => entry !== id);
+      return {
+        ...previous,
+        llm: { ...previous.llm, enabled_models: next },
+      };
+    });
+  };
+
+  const setAllLlmModels = (enabled: boolean) => {
+    setDraft((previous) =>
+      previous
+        ? {
+            ...previous,
+            llm: {
+              ...previous.llm,
+              enabled_models: enabled ? null : [],
+            },
+          }
+        : previous,
+    );
   };
 
   const handleSave = (event: React.FormEvent) => {
@@ -185,6 +223,252 @@ export default function SettingsPage() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="panel">
+        <h2>Prompt Enhancer — LLM providers</h2>
+        <div className="hint" style={{ marginBottom: 12 }}>
+          Local providers (Ollama, LM Studio) are discovered live from their
+          base URLs. Azure and Bedrock credentials come from environment
+          variables (AZURE_OPENAI_API_KEY, AWS credentials/profile) — only
+          endpoints and model names are stored here.
+        </div>
+        <div className="field field-row">
+          <div>
+            <label>Ollama base URL</label>
+            <input
+              value={draft.llm.ollama.base_url}
+              placeholder="http://localhost:11434"
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    ollama: { base_url: event.target.value },
+                  },
+                })
+              }
+            />
+          </div>
+          <div>
+            <label>LM Studio base URL</label>
+            <input
+              value={draft.llm.lmstudio.base_url}
+              placeholder="http://localhost:1234/v1"
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    lmstudio: { base_url: event.target.value },
+                  },
+                })
+              }
+            />
+          </div>
+        </div>
+        <div className="field field-row-3">
+          <div>
+            <label>Azure OpenAI endpoint</label>
+            <input
+              value={draft.llm.azure.endpoint ?? ""}
+              placeholder="https://myresource.openai.azure.com"
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    azure: {
+                      ...draft.llm.azure,
+                      endpoint: event.target.value || null,
+                    },
+                  },
+                })
+              }
+            />
+          </div>
+          <div>
+            <label>Azure API version</label>
+            <input
+              value={draft.llm.azure.api_version}
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    azure: {
+                      ...draft.llm.azure,
+                      api_version: event.target.value,
+                    },
+                  },
+                })
+              }
+            />
+          </div>
+          <div>
+            <label>Azure deployments</label>
+            <input
+              value={draft.llm.azure.deployments.join(", ")}
+              placeholder="gpt-4o, gpt-4o-mini"
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    azure: {
+                      ...draft.llm.azure,
+                      deployments: event.target.value
+                        .split(",")
+                        .map((entry) => entry.trim())
+                        .filter(Boolean),
+                    },
+                  },
+                })
+              }
+            />
+            <div className="hint">Comma-separated deployment names</div>
+          </div>
+        </div>
+        <div className="field field-row">
+          <div>
+            <label>Bedrock region</label>
+            <input
+              value={draft.llm.bedrock.region ?? ""}
+              placeholder="us-east-1"
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    bedrock: {
+                      ...draft.llm.bedrock,
+                      region: event.target.value || null,
+                    },
+                  },
+                })
+              }
+            />
+          </div>
+          <div>
+            <label>Bedrock model IDs</label>
+            <input
+              value={draft.llm.bedrock.model_ids.join(", ")}
+              placeholder="anthropic.claude-3-5-sonnet-20240620-v1:0"
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    bedrock: {
+                      ...draft.llm.bedrock,
+                      model_ids: event.target.value
+                        .split(",")
+                        .map((entry) => entry.trim())
+                        .filter(Boolean),
+                    },
+                  },
+                })
+              }
+            />
+            <div className="hint">Comma-separated model IDs</div>
+          </div>
+        </div>
+        <div className="field field-row">
+          <div>
+            <label>Default max tokens</label>
+            <input
+              type="number"
+              min={1}
+              max={8192}
+              value={draft.llm.default_max_tokens}
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    default_max_tokens: Number(event.target.value),
+                  },
+                })
+              }
+            />
+          </div>
+          <div>
+            <label>Default temperature</label>
+            <input
+              type="number"
+              min={0}
+              max={2}
+              step={0.1}
+              value={draft.llm.default_temperature}
+              onChange={(event) =>
+                setDraft({
+                  ...draft,
+                  llm: {
+                    ...draft.llm,
+                    default_temperature: Number(event.target.value),
+                  },
+                })
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="llm-models-header">
+          <h2>Prompt Enhancer — available models</h2>
+          <div className="llm-models-actions">
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => setAllLlmModels(true)}
+            >
+              Enable all
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => setAllLlmModels(false)}
+            >
+              Disable all
+            </button>
+          </div>
+        </div>
+        <div className="hint" style={{ marginBottom: 12 }}>
+          Only checked models appear in the Prompt Enhancer dropdown on the
+          Generate page. Local models are discovered live; the list refreshes
+          automatically.
+        </div>
+        {!llmModels || llmModels.length === 0 ? (
+          <div className="hint">
+            No LLM models discovered. Check provider settings above and make
+            sure Ollama / LM Studio are running.
+          </div>
+        ) : (
+          ["ollama", "lmstudio", "azure", "bedrock"].map((provider) => {
+            const entries = llmModels.filter((m) => m.provider === provider);
+            if (entries.length === 0) return null;
+            return (
+              <div key={provider} className="llm-provider-group">
+                <div className="llm-provider-label">{provider}</div>
+                <div className="llm-model-list">
+                  {entries.map((m) => (
+                    <label key={m.id} className="llm-model-item">
+                      <input
+                        type="checkbox"
+                        checked={isLlmModelEnabled(m.id)}
+                        onChange={(event) =>
+                          toggleLlmModel(m.id, event.target.checked)
+                        }
+                      />
+                      <span title={m.id}>{m.model}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className="panel">

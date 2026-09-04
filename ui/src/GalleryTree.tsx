@@ -444,6 +444,18 @@ export default function GalleryTree({ jobs }: { jobs: JobSummary[] }) {
                               <td>Model</td>
                               <td>{detailedJob.result.model}</td>
                             </tr>
+                            {detailedJob.result.source_prompt && (
+                              <tr>
+                                <td>Original prompt</td>
+                                <td>{detailedJob.result.source_prompt}</td>
+                              </tr>
+                            )}
+                            {detailedJob.result.llm_model && (
+                              <tr>
+                                <td>Enhanced by</td>
+                                <td>{detailedJob.result.llm_model}</td>
+                              </tr>
+                            )}
                             <tr>
                               <td>Size</td>
                               <td>

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import gc
+import logging
+import sys
 from collections.abc import Callable
 from importlib import import_module
 
 from src.schemas import ModelCapabilities, ModelDefaults, ModelInfo
+
+logger = logging.getLogger(__name__)
 
 GeneratorCallable = Callable[..., object]
 
@@ -166,3 +171,27 @@ def get_generator(model_name: str) -> GeneratorCallable:
         raise RuntimeError(
             f"Model module '{model_info.module}' has no generate()"
         ) from exc
+
+
+def unload_pipelines() -> None:
+    """Release every cached model pipeline and free GPU memory."""
+    unloaded = []
+    for info in MODEL_REGISTRY.values():
+        module = sys.modules.get(info.module)
+        if module is not None and getattr(module, "PIPE", None) is not None:
+            module.PIPE = None
+            unloaded.append(info.name)
+
+    if not unloaded:
+        return
+
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+    except ImportError:
+        pass
+    logger.info("Unloaded model pipelines: %s", ", ".join(unloaded))

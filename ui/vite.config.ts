@@ -11,6 +11,7 @@ export default defineConfig({
       "/models": backend,
       "/config": backend,
       "/health": backend,
+      "/llm": backend,
     },
   },
 });

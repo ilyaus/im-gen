@@ -16,6 +16,18 @@ class TestImageGen(BaseModel):
     seed_inc: int
 
 
+class PromptEnhancement(BaseModel):
+    model: str = Field(
+        min_length=1,
+        description="LLM model id as '<provider>:<model>', e.g. 'ollama:llama3.2'",
+    )
+    system_prompt: str | None = Field(
+        default=None, description="Optional system prompt for the LLM"
+    )
+    max_tokens: int | None = Field(default=None, ge=1, le=8192)
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+
+
 class JobStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -49,6 +61,10 @@ class GenerationRequest(BaseModel):
         description="LoRA checkpoint filename; used by BFS model when loading adapter weights",
     )
     test_gen: TestImageGen | None = Field(default=None)
+    enhance: PromptEnhancement | None = Field(
+        default=None,
+        description="Optional LLM prompt enhancement applied before image generation",
+    )
 
     @model_validator(mode="after")
     def validate_test_gen(self) -> GenerationRequest:
@@ -84,6 +100,20 @@ class GenerationResult(BaseModel):
     started_at: datetime
     completed_at: datetime
     duration_seconds: float
+    source_prompt: str | None = Field(
+        default=None,
+        description="Original user prompt before LLM enhancement, if any",
+    )
+    llm_model: str | None = Field(
+        default=None, description="LLM model used to enhance the prompt, if any"
+    )
+
+
+class LlmModelInfo(BaseModel):
+    id: str
+    provider: str
+    model: str
+    enabled: bool = True
 
 
 class JobRecord(BaseModel):

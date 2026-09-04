@@ -55,6 +55,14 @@ function JobCard({ jobId }: { jobId: string }) {
         )}
       </div>
       {job.error && <div className="error-box">{job.error}</div>}
+      {job.result?.llm_model && (
+        <div className="enhanced-prompt-box">
+          <span className="enhanced-prompt-label">
+            Enhanced by {job.result.llm_model}
+          </span>
+          {job.result.prompt}
+        </div>
+      )}
       {job.result && <ResultImages result={job.result} />}
     </div>
   );
@@ -69,10 +77,19 @@ export default function GeneratePage() {
     queryKey: ["config"],
     queryFn: api.getConfig,
   });
+  const { data: llmModels } = useQuery({
+    queryKey: ["llm-models"],
+    queryFn: api.listLlmModels,
+    refetchInterval: 30000,
+  });
 
   const [modelName, setModelName] = useState<string>("");
   const [prompt, setPrompt] = useState("");
   const [negPrompt, setNegPrompt] = useState("");
+  const [llmModel, setLlmModel] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [llmMaxTokens, setLlmMaxTokens] = useState(512);
+  const [llmTemperature, setLlmTemperature] = useState(0.7);
   const [width, setWidth] = useState(1024);
   const [height, setHeight] = useState(1024);
   const [steps, setSteps] = useState(4);
@@ -110,6 +127,22 @@ export default function GeneratePage() {
     setNumImages(defaults.num_images_per_prompt);
   }, [model, config]);
 
+  useEffect(() => {
+    if (!config?.llm) return;
+    setLlmMaxTokens(config.llm.default_max_tokens);
+    setLlmTemperature(config.llm.default_temperature);
+  }, [config]);
+
+  useEffect(() => {
+    if (
+      llmModel &&
+      llmModels &&
+      !llmModels.some((m) => m.id === llmModel && m.enabled)
+    ) {
+      setLlmModel("");
+    }
+  }, [llmModels, llmModel]);
+
   const submit = useMutation({
     mutationFn: (request: GenerationRequest) => api.submitJob(request),
     onSuccess: (response) => {
@@ -141,6 +174,14 @@ export default function GeneratePage() {
       test_gen: sweepEnabled
         ? { count: sweepCount, seed_inc: sweepInc }
         : null,
+      enhance: llmModel
+        ? {
+            model: llmModel,
+            system_prompt: systemPrompt || null,
+            max_tokens: llmMaxTokens,
+            temperature: llmTemperature,
+          }
+        : null,
     });
   };
 
@@ -164,6 +205,78 @@ export default function GeneratePage() {
             ))}
           </select>
           {model && <div className="hint">{model.description}</div>}
+        </div>
+        <div className="enhancer-section">
+          <div className="enhancer-header">Prompt Enhancer</div>
+          <div className="field">
+            <label>LLM model</label>
+            <select
+              value={llmModel}
+              onChange={(event) => setLlmModel(event.target.value)}
+            >
+              <option value="">None — send prompt directly</option>
+              {["ollama", "lmstudio", "azure", "bedrock"].map((provider) => {
+                const entries =
+                  llmModels?.filter(
+                    (m) => m.provider === provider && m.enabled,
+                  ) ?? [];
+                if (entries.length === 0) return null;
+                return (
+                  <optgroup key={provider} label={provider}>
+                    {entries.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.model}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+            <div className="hint">
+              {llmModel
+                ? "The LLM rewrites your prompt before image generation."
+                : "Prompt is sent to the image model as-is."}
+            </div>
+          </div>
+          {llmModel && (
+            <>
+              <div className="field">
+                <label>System prompt</label>
+                <textarea
+                  value={systemPrompt}
+                  onChange={(event) => setSystemPrompt(event.target.value)}
+                  placeholder="You are an expert image prompt engineer. Rewrite the user's idea as a single vivid, detailed image generation prompt. Reply with the prompt only."
+                />
+              </div>
+              <div className="field field-row">
+                <div>
+                  <label>Max tokens</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8192}
+                    value={llmMaxTokens}
+                    onChange={(event) =>
+                      setLlmMaxTokens(Number(event.target.value))
+                    }
+                  />
+                </div>
+                <div>
+                  <label>Temperature</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    value={llmTemperature}
+                    onChange={(event) =>
+                      setLlmTemperature(Number(event.target.value))
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div className="field">
           <label>Prompt</label>
