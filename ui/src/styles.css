@@ -1546,6 +1546,110 @@ html[data-theme="studio"] .browser-preview {
   padding: 5px 8px;
 }
 
+.llm-models-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.llm-models-header h2 {
+  margin-bottom: 12px;
+}
+
+.llm-models-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.llm-provider-group {
+  margin-bottom: 14px;
+}
+
+.llm-provider-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.llm-model-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 4px 16px;
+}
+
+.llm-model-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+
+.llm-model-item:hover {
+  background: var(--bg-hover);
+}
+
+.llm-model-item input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--accent);
+  flex: none;
+}
+
+.llm-model-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.enhancer-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 14px 2px;
+  margin-bottom: 14px;
+  background: var(--bg);
+}
+
+.enhancer-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+
+.enhanced-prompt-box {
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.enhanced-prompt-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;

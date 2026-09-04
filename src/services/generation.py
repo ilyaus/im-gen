@@ -8,7 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from src.config import get_config, resolve_request_defaults
-from src.models.registry import get_generator, get_model_info
+from src.models.registry import get_generator, get_model_info, unload_pipelines
 from src.schemas import (
     ArtifactSummary,
     GenerationRequest,
@@ -19,6 +19,7 @@ from src.schemas import (
     JobSubmissionResponse,
     JobSummary,
 )
+from src.services import enhancer
 from src.storage import get_job_output_dir, get_output_root
 
 JOB_RECORD_FILENAME = "job.json"
@@ -227,7 +228,20 @@ class GenerationService:
             job.started_at = datetime.now(UTC)
             request = job.request.model_copy(deep=True)
 
+        source_prompt: str | None = None
+        llm_model: str | None = None
+
         try:
+            if request.enhance is not None:
+                source_prompt = request.prompt
+                llm_model = request.enhance.model
+                enhanced_prompt = enhancer.enhance_prompt(
+                    request.enhance, request.prompt
+                )
+                request = request.model_copy(
+                    deep=True, update={"prompt": enhanced_prompt}
+                )
+
             output_dir = get_job_output_dir(job_id)
             result = self._generate_result(
                 request=request,
@@ -243,6 +257,14 @@ class GenerationService:
                 failed_job = job.model_copy(deep=True)
             self._persist_job(failed_job)
             return
+        finally:
+            # Runs after the except block has completed, so the exception's
+            # traceback (which references the pipeline via stack frames) has
+            # been released and the pipeline memory can actually be freed.
+            unload_pipelines()
+
+        result.source_prompt = source_prompt
+        result.llm_model = llm_model
 
         with self._lock:
             job = self._jobs[job_id]

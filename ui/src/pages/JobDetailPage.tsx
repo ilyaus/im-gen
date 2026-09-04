@@ -76,6 +76,18 @@ export default function JobDetailPage() {
               <td>Prompt</td>
               <td>{result?.prompt ?? "—"}</td>
             </tr>
+            {result?.source_prompt && (
+              <tr>
+                <td>Original prompt</td>
+                <td>{result.source_prompt}</td>
+              </tr>
+            )}
+            {result?.llm_model && (
+              <tr>
+                <td>Enhanced by</td>
+                <td>{result.llm_model}</td>
+              </tr>
+            )}
             {result?.neg_prompt && (
               <tr>
                 <td>Negative prompt</td>

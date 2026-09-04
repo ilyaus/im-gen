@@ -33,10 +33,34 @@ Pages:
 - **Gallery** - persisted job history with thumbnails, model/status filters, pagination, job detail and delete
 - **Settings** - service configuration, BFS LoRA settings, and per-model default overrides
 
+## Prompt Enhancer
+
+Requests can optionally route the prompt through an LLM before image generation. Supported providers: **Ollama** and **LM Studio** (local, models discovered live), **Azure OpenAI** and **AWS Bedrock** (cloud, configured in `config.yaml`; credentials via `AZURE_OPENAI_API_KEY` and standard AWS environment/profile).
+
+```bash
+curl -X POST http://127.0.0.1:8000/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "flux2-klein-9b",
+    "prompt": "a cat",
+    "enhance": {
+      "model": "ollama:llama3.1:latest",
+      "system_prompt": "Rewrite the idea as a vivid image prompt. Reply with the prompt only.",
+      "max_tokens": 512,
+      "temperature": 0.7
+    }
+  }'
+```
+
+When `enhance` is set, the service calls the LLM, waits for the response, and uses it as the image prompt. The result records both `prompt` (enhanced) and `source_prompt` (original). Omit `enhance` to send the prompt directly to the image model.
+
+After every job the image model pipeline is unloaded and GPU memory is released.
+
 ## Endpoints
 
 - `GET /health` - service health check
 - `GET /models` - list models with defaults and capabilities
+- `GET /llm/models` - list available LLM models for prompt enhancement
 - `GET /config` - current service configuration
 - `PUT /config` - update and persist service configuration
 - `POST /jobs` - submit a generation request

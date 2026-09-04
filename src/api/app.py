@@ -16,8 +16,10 @@ from src.schemas import (
     JobStatus,
     JobStatusResponse,
     JobSubmissionResponse,
+    LlmModelInfo,
     ModelInfo,
 )
+from src.services.enhancer import list_llm_models
 from src.services.generation import generation_service
 
 UI_DIST_DIR = Path(__file__).resolve().parent.parent.parent / "ui" / "dist"
@@ -60,6 +62,10 @@ def create_app() -> FastAPI:
     @app.get("/models", response_model=list[ModelInfo])
     def get_models() -> list[ModelInfo]:
         return list_models()
+
+    @app.get("/llm/models", response_model=list[LlmModelInfo])
+    def get_llm_models() -> list[LlmModelInfo]:
+        return list_llm_models()
 
     @app.get("/config", response_model=ServiceConfig)
     def read_config() -> ServiceConfig:

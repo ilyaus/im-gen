@@ -49,6 +49,22 @@ export interface GenerationResult {
   started_at: string;
   completed_at: string;
   duration_seconds: number;
+  source_prompt: string | null;
+  llm_model: string | null;
+}
+
+export interface LlmModelInfo {
+  id: string;
+  provider: string;
+  model: string;
+  enabled: boolean;
+}
+
+export interface PromptEnhancement {
+  model: string;
+  system_prompt?: string | null;
+  max_tokens?: number | null;
+  temperature?: number | null;
 }
 
 export interface JobStatusResponse {
@@ -101,12 +117,23 @@ export interface BfsLoraConfig {
   scale: number;
 }
 
+export interface LlmConfig {
+  ollama: { base_url: string };
+  lmstudio: { base_url: string };
+  azure: { endpoint: string | null; api_version: string; deployments: string[] };
+  bedrock: { region: string | null; model_ids: string[] };
+  default_max_tokens: number;
+  default_temperature: number;
+  enabled_models: string[] | null;
+}
+
 export interface ServiceConfig {
   output_root: string;
   max_workers: number;
   default_model: string | null;
   bfs_lora: BfsLoraConfig;
   model_defaults: Record<string, ModelDefaultOverride>;
+  llm: LlmConfig;
 }
 
 export interface GenerationRequest {
@@ -122,6 +149,7 @@ export interface GenerationRequest {
   seed?: number;
   output_prefix?: string | null;
   test_gen?: { count: number; seed_inc: number } | null;
+  enhance?: PromptEnhancement | null;
 }
 
 export interface JobSubmissionResponse {
@@ -151,6 +179,8 @@ async function handle<T>(response: Response): Promise<T> {
 
 export const api = {
   listModels: () => fetch("/models").then((r) => handle<ModelInfo[]>(r)),
+  listLlmModels: () =>
+    fetch("/llm/models").then((r) => handle<LlmModelInfo[]>(r)),
   getConfig: () => fetch("/config").then((r) => handle<ServiceConfig>(r)),
   putConfig: (config: ServiceConfig) =>
     fetch("/config", {
